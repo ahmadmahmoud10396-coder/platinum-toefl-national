@@ -282,6 +282,37 @@ window.pa32SignOut=function(){try{sessionStorage.removeItem(activeKey)}catch(e){
 window.pa32GetStudentName=function(){if(!id)return '';try{const p=JSON.parse(raw.getItem('platinum-v32-profile:'+id)||'null');return p&&p.name||''}catch(e){return ''}};
 })();
 </script>
+
+<!-- PLATINUM_TOEFL_AUTH_GUARD -->
+<style id="platinum-auth-guard-style">html{visibility:hidden!important}</style>
+<script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
+const sb=createClient('https://yqgqylzfveiennyprsip.supabase.co','sb_publishable_uZ1Oyk5hnQfjkJFfvdIW3A_zZmEhHYv');
+const reveal=()=>{document.documentElement.style.visibility='visible';document.getElementById('platinum-auth-guard-style')?.remove();};
+const deny=async()=>{try{await sb.auth.signOut()}catch{} location.replace('./student-login.html');};
+async function verify(){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) return deny();
+    const {data,error}=await sb.rpc('toefl_student_access');
+    if(error) return deny();
+    const row=Array.isArray(data)?data[0]:data;
+    if(!row||!row.allowed) return deny();
+    reveal();
+  }catch(e){
+    return deny();
+  }
+}
+await verify();
+setInterval(async()=>{
+  try{
+    const {data,error}=await sb.rpc('toefl_student_access');
+    const row=Array.isArray(data)?data[0]:data;
+    if(error||!row||!row.allowed) await deny();
+  }catch{await deny();}
+},60000);
+</script>
+
 </head>
 <body>
 <section id="pa32-gate" dir="rtl" aria-label="تسجيل دخول الطالب"><div id="pa32-card"><h2>أكاديمية بلاتينيوم للتدريب</h2><p><strong>الدخول إلى منصة TOEFL — ملف الطالب</strong></p><p>اكتب رقم الطالب واسمه المسجل. يتم حفظ الإجابات والتقدم بصورة منفصلة لكل رقم طالب على هذا الجهاز.</p><form id="pa32-form"><label for="pa32-id">رقم الطالب (أحرف أو أرقام إنجليزية)</label><input id="pa32-id" autocomplete="off" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_-]+" placeholder="مثال: PA1024"><label for="pa32-name">اسم الطالب</label><input id="pa32-name" autocomplete="name" required minlength="2" maxlength="80" placeholder="اسم الطالب الكامل"><div id="pa32-error" role="alert"></div><button type="submit">الدخول / استكمال الدراسة</button></form><small>تنبيه: هذا نظام فصل ملفات على الجهاز، وليس نظام حسابات آمنًا بكلمة مرور. أي شخص يعرف الرقم والاسم يمكنه الدخول إلى بيانات الطالب على نفس الجهاز. يُفضّل أن يحتفظ المشرف بأرقام الطلاب وأن تكون الأجهزة تحت إشرافه.</small></div></section>
